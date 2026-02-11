@@ -1,7 +1,5 @@
 import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_callkit_incoming/entities/entities.dart';
-import 'package:flutter_callkit_incoming/entities/call_event.dart';
-import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:go_router/go_router.dart';
 import '../../main.dart';
@@ -52,12 +50,11 @@ class CallKitService {
       android: const AndroidParams(
         isCustomNotification: true,
         isShowLogo: false,
-        ringtonePath: 'notifica', // ✅ Som personalizado 'notifica'
+        ringtonePath: 'ringtone', // Som personalizado (sem extensao no Android)
         backgroundColor: '#4A148C', // Deep Purple (Brand)
-        backgroundUrl: 'assets/images/eva_transparent.png', // ✅ Fundo EVA
-        actionColor: '#EC4899', // Pink (Brand) - Substitui o Verde
-        isShowFullLockedScreen: true, // ✅ Maximizar na tela de bloqueio
-        // 🔴 P1 FIX: Force app to launch from background
+        backgroundUrl: 'assets/images/eva_transparent.png', // Fundo EVA
+        actionColor: '#EC4899', // Pink (Brand)
+        isShowFullLockedScreen: true, // Maximizar na tela de bloqueio
         incomingCallNotificationChannelName: 'Incoming Call',
         isShowCallID: true,
       ),
@@ -75,8 +72,7 @@ class CallKitService {
         supportsHolding: true,
         supportsGrouping: false,
         supportsUngrouping: false,
-        ringtonePath:
-            'notifica.mp3', // ✅ Som personalizado (iOS requer extensão)
+        ringtonePath: 'ringtone.mp3', // Som personalizado (iOS requer extensao)
       ),
     );
 

@@ -11,7 +11,7 @@ class AppTheme {
   static const double recommendedTouchTargetSize = 48.0;
 
   static ThemeData buildTheme(BuildContext context) {
-    final textScaleFactor = MediaQuery.textScaleFactorOf(context);
+    final textScaleFactor = MediaQuery.textScalerOf(context).scale(1.0);
     final isBoldText = MediaQuery.boldTextOf(context);
 
     return ThemeData(

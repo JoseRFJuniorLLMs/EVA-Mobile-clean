@@ -41,7 +41,7 @@ void main() {
     test('Should handle CPF with formatting', () async {
       // CPF with dots and dash should be cleaned
       // Note: This will fail API call but validates cleaning
-      final success = await authProvider.loginByCpf('123.456.789-00');
+      await authProvider.loginByCpf('123.456.789-00');
 
       // Will be error because API is not mocked, but CPF validation should pass
       expect(authProvider.status, isIn([AuthStatus.error, AuthStatus.loading]));

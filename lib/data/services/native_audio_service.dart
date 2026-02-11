@@ -14,9 +14,9 @@ class NativeAudioService {
 
   // Config
   // Gemini Input: 16kHz
-  static const int INPUT_SAMPLE_RATE = 16000;
+  static const int inputSampleRate = 16000;
   // Gemini Output: 24kHz
-  static const int OUTPUT_SAMPLE_RATE = 24000;
+  static const int outputSampleRate = 24000;
 
   StreamSubscription? _audioSubscription;
   Function(List<int>)? onAudioRecorded;
@@ -43,17 +43,17 @@ class NativeAudioService {
       // Init Recorder (16kHz Mono PCM16)
       // sound_stream 0.4.x API - simplified params
       await _recorder.initialize(
-        sampleRate: INPUT_SAMPLE_RATE,
+        sampleRate: inputSampleRate,
       );
 
       // Init Player (24kHz Mono PCM16)
       await _player.initialize(
-        sampleRate: OUTPUT_SAMPLE_RATE,
+        sampleRate: outputSampleRate,
       );
 
       _isInitialized = true;
       _logger.i(
-          '✅ Native Audio Initialized (In: ${INPUT_SAMPLE_RATE}Hz / Out: ${OUTPUT_SAMPLE_RATE}Hz)');
+          '✅ Native Audio Initialized (In: ${inputSampleRate}Hz / Out: ${outputSampleRate}Hz)');
     } catch (e) {
       _logger.e('❌ Native Audio Init Error: $e');
       rethrow;

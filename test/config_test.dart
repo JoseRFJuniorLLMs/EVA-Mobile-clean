@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -29,8 +30,8 @@ void main() {
     expect(androidInfo['package_name'], equals('com.eva.br'),
         reason: 'Package name incorreto no JSON');
 
-    print('✅ SUCESSO: google-services.json encontrado e validado!');
-    print('   Project ID: ${json['project_info']['project_id']}');
-    print('   Package: ${androidInfo['package_name']}');
+    debugPrint('SUCESSO: google-services.json encontrado e validado!');
+    debugPrint('   Project ID: ${json['project_info']['project_id']}');
+    debugPrint('   Package: ${androidInfo['package_name']}');
   });
 }

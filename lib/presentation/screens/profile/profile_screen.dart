@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../../data/services/storage_service.dart';
+import '../../../providers/language_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -12,89 +14,88 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
-    // ✅ Buscar dados reais do storage
-    final nome = StorageService.getIdosoNome() ?? 'Usuário';
-    final cpf = StorageService.getIdosoCpf() ?? 'Não disponível';
-    final telefone = StorageService.getIdosoTelefone() ?? 'Não disponível';
+    final nome = StorageService.getIdosoNome() ?? 'Usuario';
+    final cpf = StorageService.getIdosoCpf() ?? '-';
+    final telefone = StorageService.getIdosoTelefone() ?? '-';
     final id = StorageService.getIdosoId()?.toString() ?? 'N/A';
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: const Text(
-          'Meu Perfil',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.go('/home'),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () async {
-              // ✅ Confirmar logout
-              final confirm = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Sair'),
-                  content: const Text('Deseja realmente sair do aplicativo?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancelar'),
+    return Consumer<LanguageProvider>(
+      builder: (context, lang, _) {
+        return Scaffold(
+          extendBodyBehindAppBar: true,
+          appBar: AppBar(
+            title: Text(
+              lang.t('my_profile'),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => context.go('/home'),
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.logout, color: Colors.white),
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: Text(lang.t('logout')),
+                      content: Text(lang.t('logout_confirm')),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: Text(lang.t('cancel')),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: Text(lang.t('logout')),
+                        ),
+                      ],
                     ),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('Sair'),
-                    ),
-                  ],
-                ),
-              );
+                  );
 
-              if (confirm == true && mounted) {
-                await StorageService.clearAll();
-                if (mounted) context.go('/setup');
-              }
-            },
-          ),
-        ],
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF9F70D8), // Roxo
-              Color(0xFFFFB6C1), // Rosa claro
+                  if (confirm == true && context.mounted) {
+                    await StorageService.clearAll();
+                    if (context.mounted) context.go('/login');
+                  }
+                },
+              ),
             ],
           ),
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              const SizedBox(height: 100), // Height for back button and title
-              _buildHeader(nome),
-              const SizedBox(height: 24),
-              _buildInfoSection(nome, cpf, telefone, id),
-              const SizedBox(height: 24),
-              _buildActionButtons(),
-              const SizedBox(height: 40),
-            ],
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF9F70D8), Color(0xFFFFB6C1)],
+              ),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  const SizedBox(height: 100),
+                  _buildHeader(nome, lang),
+                  const SizedBox(height: 24),
+                  _buildInfoSection(nome, cpf, telefone, id, lang),
+                  const SizedBox(height: 24),
+                  _buildActionButtons(lang),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildHeader(String name) {
+  Widget _buildHeader(String name, LanguageProvider lang) {
     return Container(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -119,17 +120,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               fontWeight: FontWeight.bold,
               color: Colors.white,
               shadows: [
-                Shadow(
-                  color: Colors.black26,
-                  offset: Offset(0, 2),
-                  blurRadius: 4,
-                ),
+                Shadow(color: Colors.black26, offset: Offset(0, 2), blurRadius: 4),
               ],
             ),
           ),
-          const Text(
-            'Usuário do Sistema EVA',
-            style: TextStyle(color: Colors.white70, fontSize: 16),
+          Text(
+            lang.t('eva_user'),
+            style: const TextStyle(color: Colors.white70, fontSize: 16),
           ),
         ],
       ),
@@ -137,23 +134,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildInfoSection(
-    String nome,
-    String cpf,
-    String telefone,
-    String id,
+    String nome, String cpf, String telefone, String id, LanguageProvider lang,
   ) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Card(
-        color: Colors.white.withValues(alpha: 0.9),
+        color: Colors.white.withValues(alpha:0.9),
         elevation: 10,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Column(
           children: [
-            _buildInfoTile(Icons.person, 'Nome', nome),
-            _buildInfoTile(Icons.badge, 'CPF', _formatCpf(cpf)),
-            _buildInfoTile(Icons.phone, 'Telefone', telefone),
-            _buildInfoTile(Icons.key, 'ID do Sistema', id, isLast: true),
+            _buildInfoTile(Icons.person, lang.t('name'), nome),
+            _buildInfoTile(Icons.badge, lang.t('doc_label'), _formatCpf(cpf)),
+            _buildInfoTile(Icons.phone, lang.t('phone'), telefone),
+            _buildInfoTile(Icons.key, lang.t('system_id'), id, isLast: true),
           ],
         ),
       ),
@@ -161,21 +155,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildInfoTile(
-    IconData icon,
-    String title,
-    String value, {
-    bool isLast = false,
-  }) {
+    IconData icon, String title, String value, {bool isLast = false,}
+  ) {
     return Column(
       children: [
         ListTile(
           leading: Icon(icon, color: const Color(0xFF9F70D8)),
           title: Text(
             title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.black54,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
           ),
           subtitle: Text(
             value,
@@ -183,40 +171,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         if (!isLast)
-          Divider(
-            height: 1,
-            indent: 70,
-            color: Colors.grey.withValues(alpha: 0.3),
-          ),
+          Divider(height: 1, indent: 70, color: Colors.grey.withValues(alpha:0.3)),
       ],
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(LanguageProvider lang) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         children: [
           _buildPremiumButton(
             icon: Icons.settings,
-            label: 'Configurações',
+            label: lang.t('settings'),
             colors: [const Color(0xFFE0B0FF), const Color(0xFF9F70D8)],
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Configurações em desenvolvimento'),
-                ),
+                SnackBar(content: Text(lang.t('settings_dev'))),
               );
             },
           ),
           const SizedBox(height: 20),
           _buildPremiumButton(
             icon: Icons.help_outline,
-            label: 'Ajuda e Suporte',
+            label: lang.t('help_support'),
             colors: [const Color(0xFFFFB6C1), const Color(0xFFFF69B4)],
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Ajuda em desenvolvimento')),
+                SnackBar(content: Text(lang.t('help_dev'))),
               );
             },
           ),
@@ -248,7 +230,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             boxShadow: [
               BoxShadow(
-                color: colors.last.withValues(alpha: 0.4),
+                color: colors.last.withValues(alpha:0.4),
                 blurRadius: 12,
                 offset: const Offset(0, 8),
               ),

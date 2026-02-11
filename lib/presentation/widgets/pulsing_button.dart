@@ -17,7 +17,7 @@ class PulsingButton extends StatefulWidget {
   });
 
   @override
-  _PulsingButtonState createState() => _PulsingButtonState();
+  State<PulsingButton> createState() => _PulsingButtonState();
 }
 
 class _PulsingButtonState extends State<PulsingButton>
@@ -53,14 +53,17 @@ class _PulsingButtonState extends State<PulsingButton>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: _scaleAnimation.value,
-          child: GestureDetector(
-            onTap: widget.onTap,
-            child: Container(
+    return Semantics(
+      button: true,
+      label: widget.label.isNotEmpty ? widget.label : 'Atender chamada',
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: GestureDetector(
+              onTap: widget.onTap,
+              child: Container(
               width: widget.size,
               height: widget.size,
               decoration: BoxDecoration(
@@ -149,6 +152,7 @@ class _PulsingButtonState extends State<PulsingButton>
           ),
         );
       },
+      ),
     );
   }
 }

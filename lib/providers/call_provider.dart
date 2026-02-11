@@ -26,6 +26,7 @@ class CallProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
   final _platformChannel = const MethodChannel('com.eva.br/minimize');
   AudioPlayer? _ringtonePlayer;
+  Timer? _vibrationTimer;
 
   CallStatus _status = CallStatus.idle;
   String? _currentSessionId;
@@ -54,7 +55,7 @@ class CallProvider with ChangeNotifier {
 
     FirebaseService.onVoiceCallReceived = (sessionId, idosoData) {
       _logger.i('Callback do Firebase disparado no Provider!');
-      receiveCall(sessionId, idosoData: idosoData);
+      receiveCall(sessionId, idosoData: idosoData, playRingtone: false);
     };
   }
 
@@ -154,15 +155,19 @@ class CallProvider with ChangeNotifier {
   Future<void> receiveCall(
     String sessionId, {
     Map<String, dynamic>? idosoData,
+    bool playRingtone = true,
   }) async {
-    _logger.i('RECEBENDO CHAMADA - Session: $sessionId');
+    _logger.i('RECEBENDO CHAMADA - Session: $sessionId (ringtone: $playRingtone)');
 
     _currentSessionId = sessionId;
     _currentIdosoData = idosoData;
     _status = CallStatus.ringing;
     _errorMessage = null;
 
-    _playRingtone();
+    // Tocar ringtone apenas se CallKit NAO esta tocando (evita som duplo)
+    if (playRingtone) {
+      _playRingtone();
+    }
     notifyListeners();
   }
 
@@ -274,9 +279,7 @@ class CallProvider with ChangeNotifier {
       final cpf = StorageService.getIdosoCpf();
       if (cpf == null) throw Exception('CPF nao encontrado');
 
-      if (_currentSessionId == null) {
-        _currentSessionId = 'mobile-${DateTime.now().millisecondsSinceEpoch}';
-      }
+      _currentSessionId ??= 'mobile-${DateTime.now().millisecondsSinceEpoch}';
 
       if (_currentSessionId != null) {
         await FlutterCallkitIncoming.setCallConnected(_currentSessionId!);
@@ -397,7 +400,14 @@ class CallProvider with ChangeNotifier {
     try {
       _ringtonePlayer ??= AudioPlayer();
       await _ringtonePlayer!.setReleaseMode(ReleaseMode.loop);
-      await _ringtonePlayer!.play(AssetSource('sounds/notifica.mp3'));
+      await _ringtonePlayer!.play(AssetSource('sounds/ringtone.mp3'));
+
+      // Vibracao repetida enquanto toca
+      _vibrationTimer?.cancel();
+      _vibrationTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        HapticFeedback.heavyImpact();
+      });
+      HapticFeedback.heavyImpact();
     } catch (e) {
       _logger.w('Erro ao tocar ringtone: $e');
     }
@@ -405,6 +415,8 @@ class CallProvider with ChangeNotifier {
 
   Future<void> _stopRingtone() async {
     try {
+      _vibrationTimer?.cancel();
+      _vibrationTimer = null;
       if (_ringtonePlayer != null) {
         await _ringtonePlayer!.stop();
         await _ringtonePlayer!.dispose();

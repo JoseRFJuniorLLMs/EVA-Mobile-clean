@@ -96,7 +96,7 @@ class _SplashScreenState extends State<SplashScreen>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
+                          color: Colors.black.withValues(alpha:0.2),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
@@ -142,7 +142,7 @@ class _SplashScreenState extends State<SplashScreen>
                     'Emotional Virtual Assistant',
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha:0.9),
                       letterSpacing: 2,
                     ),
                   ),
@@ -155,7 +155,7 @@ class _SplashScreenState extends State<SplashScreen>
                     child: CircularProgressIndicator(
                       strokeWidth: 3,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.white.withOpacity(0.8),
+                        Colors.white.withValues(alpha:0.8),
                       ),
                     ),
                   ),

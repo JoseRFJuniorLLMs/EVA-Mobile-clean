@@ -3,24 +3,23 @@ import 'dart:convert';
 import '../../core/config/app_config.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:logger/logger.dart';
-import 'storage_service.dart';
+import 'connection_manager.dart';
 
 class WebSocketService {
-  // ✅ SINGLETON PATTERN - Garante mesma instância em todo o app
   static final WebSocketService _instance = WebSocketService._internal();
   factory WebSocketService() => _instance;
   WebSocketService._internal();
 
   final Logger _logger = Logger();
+  final ConnectionManager _connManager = ConnectionManager();
   WebSocketChannel? _channel;
   final _messageController = StreamController<dynamic>.broadcast();
 
-  // 🔴 P0 FIX: Reconnection tracking
   int _reconnectAttempts = 0;
   static const _maxReconnectAttempts = 10;
   static const _baseReconnectDelay = Duration(seconds: 3);
 
-  // Busca a URL do AppConfig
+  // Reads the WS URL from AppConfig.active (changes after failover)
   String get _wsUrl => AppConfig.wsUrl;
 
   bool get isConnected => _channel != null;
@@ -34,7 +33,7 @@ class WebSocketService {
     }
 
     try {
-      _logger.i('🔌 Connecting to WebSocket: $_wsUrl');
+      _logger.i('🔌 Connecting to WebSocket: $_wsUrl [${AppConfig.active.label}]');
       final uri = Uri.parse(_wsUrl);
       _channel = WebSocketChannel.connect(uri);
 
@@ -65,27 +64,6 @@ class WebSocketService {
     }
   }
 
-  void _registerClient() {
-    try {
-      final cpf = StorageService.getIdosoCpf();
-
-      if (cpf == null || cpf.isEmpty) {
-        _logger.e('❌ CPF não encontrado no storage, não é possível registrar');
-        return;
-      }
-
-      sendMessage({
-        'type': 'register',
-        'user_type': 'patient',
-        'cpf': cpf,
-      });
-
-      _logger.i('📝 Client registered as patient with CPF: $cpf');
-    } catch (e) {
-      _logger.e('❌ Error registering client: $e');
-    }
-  }
-
   Timer? _pingTimer;
 
   void _startPingTimer() {
@@ -106,27 +84,33 @@ class WebSocketService {
 
   Future<void> _reconnect() async {
     if (_reconnectAttempts >= _maxReconnectAttempts) {
-      _logger.e(
-        '❌ Max reconnection attempts ($_maxReconnectAttempts) reached. Giving up.',
-      );
-      _messageController.addError('Max reconnection attempts reached');
-      return;
+      // All attempts exhausted on current server — try failover
+      _logger.w('🔄 Max reconnects reached. Attempting server failover...');
+      await _connManager.failover();
+      _reconnectAttempts = 0;
+
+      // Try connecting to the new server
+      try {
+        await connect();
+        return;
+      } catch (e) {
+        _logger.e('❌ Failover WS connect also failed: $e');
+        _messageController.addError('All servers unreachable');
+        return;
+      }
     }
 
     _reconnectAttempts++;
     _logger.i(
-      '🔄 Reconnection attempt $_reconnectAttempts/$_maxReconnectAttempts',
+      '🔄 Reconnection attempt $_reconnectAttempts/$_maxReconnectAttempts [${AppConfig.active.label}]',
     );
 
     _pingTimer?.cancel();
     _pingTimer = null;
 
-    // 🔴 P0 FIX: Exponential backoff (3s, 6s, 12s, 24s, 30s max)
+    // Exponential backoff (3s, 6s, 12s, 24s, 30s max)
     final delaySeconds =
-        (_baseReconnectDelay.inSeconds * (1 << (_reconnectAttempts - 1))).clamp(
-      3,
-      30,
-    );
+        (_baseReconnectDelay.inSeconds * (1 << (_reconnectAttempts - 1))).clamp(3, 30);
     _logger.i('⏳ Waiting ${delaySeconds}s before reconnect...');
     await Future.delayed(Duration(seconds: delaySeconds));
 
@@ -164,12 +148,10 @@ class WebSocketService {
   void sendBytes(List<int> data) {
     if (_channel == null) return;
 
-    // Fragmentar pacotes grandes (4KB)
     const int chunkSize = 4096;
     int offset = 0;
     while (offset < data.length) {
-      final end =
-          (offset + chunkSize > data.length) ? data.length : offset + chunkSize;
+      final end = (offset + chunkSize > data.length) ? data.length : offset + chunkSize;
       final chunk = data.sublist(offset, end);
       try {
         _channel!.sink.add(chunk);

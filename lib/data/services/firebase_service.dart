@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:logger/logger.dart';
 import 'package:flutter/services.dart'; // 🔴 P1 FIX: For MethodChannel
@@ -217,7 +218,7 @@ class FirebaseService {
       _logger.i('🔄 Syncing token with backend for CPF: $cpf');
 
       final apiService = ApiService();
-      final result = await apiService.syncTokenByCpf(cpf: cpf, token: token);
+      await apiService.syncTokenByCpf(cpf: cpf, token: token);
 
       _logger.i('✅ Token synced successfully with backend');
     } catch (e) {
@@ -275,24 +276,34 @@ class FirebaseService {
         '📞 Voice call notification in foreground - Auto-opening call screen',
       );
 
-      // 🔴 P1 FIX: Auto-navigate to call screen when notification arrives
-      final context = navigatorKey.currentContext;
-      if (context != null) {
-        final provider = Provider.of<CallProvider>(context, listen: false);
+      // MAXIMIZE APP (pode estar minimizado apos 3s da home)
+      try {
+        const platform = MethodChannel('com.eva.br/app_launcher');
+        await platform.invokeMethod('launchApp');
+        _logger.i('✅ App maximized from foreground handler');
+      } catch (e) {
+        _logger.w('⚠️ Failed to maximize app: $e');
+      }
+
+      final ctx = navigatorKey.currentContext;
+      if (ctx != null) {
+        final provider = Provider.of<CallProvider>(ctx, listen: false);
 
         // Extract session data
         final sessionId = message.data['sessionId'];
         Map<String, dynamic> idosoData = {};
-        if (message.data.containsKey('idosoId'))
+        if (message.data.containsKey('idosoId')) {
           idosoData['idosoId'] = message.data['idosoId'];
-        if (message.data.containsKey('idosoNome'))
+        }
+        if (message.data.containsKey('idosoNome')) {
           idosoData['nome'] = message.data['idosoNome'];
+        }
 
         // Update provider state to show incoming call
         provider.receiveCall(sessionId, idosoData: idosoData);
 
         // Navigate to call screen automatically
-        context.push('/call');
+        ctx.push('/call');
 
         _logger.i('✅ Auto-navigated to call screen');
       } else {

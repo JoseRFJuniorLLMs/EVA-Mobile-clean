@@ -133,7 +133,7 @@ class AuthProvider with ChangeNotifier {
         await StorageService.saveFcmToken(_fcmToken!);
 
         final success = await _apiService.syncTokenByCpf(
-          cpf: _idoso!.cpf!,
+          cpf: _idoso!.cpf,
           token: _fcmToken!,
         );
 

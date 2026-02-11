@@ -14,10 +14,13 @@ import 'firebase_options.dart';
 import 'data/services/firebase_service.dart';
 import 'data/services/callkit_service.dart';
 import 'data/services/storage_service.dart';
+import 'data/services/connection_manager.dart';
+import 'core/config/app_config.dart';
 
 // Providers
 import 'providers/call_provider.dart';
 import 'providers/auth_provider.dart';
+import 'providers/language_provider.dart';
 
 // Screens
 import 'presentation/screens/home/home_screen.dart';
@@ -25,6 +28,7 @@ import 'presentation/screens/profile/profile_screen.dart';
 import 'presentation/screens/call/call_screen.dart';
 import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/splash/splash_screen.dart';
+import 'presentation/screens/schedule/schedule_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -43,6 +47,12 @@ void main() async {
     // 2. Inicializar Storage Local
     logger.i('Initializing local storage...');
     await StorageService.init();
+
+    // 2.5 Discover best server (GCP primary → DigitalOcean fallback)
+    logger.i('Discovering server...');
+    final connManager = ConnectionManager();
+    await connManager.initialize();
+    logger.i('Active server: ${AppConfig.active.label} (${AppConfig.active.apiBaseUrl})');
 
     // 3. Inicializar Firebase
     logger.i('Initializing Firebase...');
@@ -97,9 +107,10 @@ void main() async {
     final callProvider = await CallProvider.create();
 
     // 6. Configurar callback de chamada recebida
+    // playRingtone=false pois CallKit ja toca o som nativo
     FirebaseService.onVoiceCallReceived = (sessionId, idosoData) {
       logger.i('BACKEND triggered call! Session: $sessionId');
-      callProvider.receiveCall(sessionId, idosoData: idosoData);
+      callProvider.receiveCall(sessionId, idosoData: idosoData, playRingtone: false);
     };
 
     // 7. Iniciar listeners
@@ -142,11 +153,12 @@ class _MyAppState extends State<MyApp> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => LanguageProvider()),
         ChangeNotifierProvider.value(value: widget.callProvider),
       ],
       child: PopScope(
         canPop: false,
-        onPopInvoked: (bool didPop) async {
+        onPopInvokedWithResult: (bool didPop, dynamic result) async {
           if (!didPop) {
             SystemNavigator.pop();
           }
@@ -201,6 +213,11 @@ class _MyAppState extends State<MyApp> {
           path: '/splash',
           name: 'splash',
           builder: (context, state) => const SplashScreen(),
+        ),
+        GoRoute(
+          path: '/schedule',
+          name: 'schedule',
+          builder: (context, state) => const ScheduleScreen(),
         ),
       ],
       errorBuilder: (context, state) => Scaffold(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:eva_mobile/providers/call_provider.dart';
+import 'package:eva_mobile/providers/language_provider.dart';
 import 'package:eva_mobile/presentation/widgets/pulsing_button.dart';
 import 'package:logger/logger.dart';
 
@@ -19,8 +20,8 @@ class _CallScreenState extends State<CallScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: Consumer<CallProvider>(
-        builder: (context, provider, child) {
+      body: Consumer2<CallProvider, LanguageProvider>(
+        builder: (context, provider, lang, child) {
           return Stack(
             children: [
               // Background
@@ -30,10 +31,7 @@ class _CallScreenState extends State<CallScreen> {
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFFFFB6C1),
-                        Color(0xFFE0B0FF),
-                      ],
+                      colors: [Color(0xFFFFB6C1), Color(0xFFE0B0FF)],
                     ),
                   ),
                 ),
@@ -54,7 +52,7 @@ class _CallScreenState extends State<CallScreen> {
                 ),
 
               // UI Layer
-              SafeArea(child: _buildCallUI(provider)),
+              SafeArea(child: _buildCallUI(provider, lang)),
             ],
           );
         },
@@ -62,30 +60,25 @@ class _CallScreenState extends State<CallScreen> {
     );
   }
 
-  Widget _buildCallUI(CallProvider provider) {
+  Widget _buildCallUI(CallProvider provider, LanguageProvider lang) {
     switch (provider.status) {
       case CallStatus.idle:
       case CallStatus.connecting:
-        return _buildConnectingState();
+        return _buildConnectingState(lang);
 
       case CallStatus.ringing:
         return _buildRingingState(provider);
 
       case CallStatus.connected:
-        return _buildConnectedState(provider);
+        return _buildConnectedState(provider, lang);
 
       case CallStatus.error:
-        return _buildErrorState(provider);
+        return _buildErrorState(provider, lang);
 
       case CallStatus.ended:
       case CallStatus.ending:
-        return _buildEndedState(provider);
+        return _buildEndedState(lang);
 
-      default:
-        Future.microtask(() => context.go('/home'));
-        return const Center(
-          child: CircularProgressIndicator(color: Colors.pink),
-        );
     }
   }
 
@@ -106,7 +99,7 @@ class _CallScreenState extends State<CallScreen> {
     );
   }
 
-  Widget _buildConnectingState() {
+  Widget _buildConnectingState(LanguageProvider lang) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -116,7 +109,7 @@ class _CallScreenState extends State<CallScreen> {
           ),
           const SizedBox(height: 30),
           Text(
-            'Conectando...',
+            lang.t('connecting'),
             style: TextStyle(
               fontSize: 24,
               color: Colors.pink.shade900,
@@ -128,7 +121,7 @@ class _CallScreenState extends State<CallScreen> {
     );
   }
 
-  Widget _buildConnectedState(CallProvider provider) {
+  Widget _buildConnectedState(CallProvider provider, LanguageProvider lang) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -169,7 +162,7 @@ class _CallScreenState extends State<CallScreen> {
               // Mute
               _build3DButton(
                 icon: provider.isMuted ? Icons.mic_off : Icons.mic,
-                label: provider.isMuted ? 'Mudo' : 'Microfone',
+                label: provider.isMuted ? lang.t('muted') : lang.t('microphone'),
                 colors: [const Color(0xFFE0B0FF), const Color(0xFF9F70D8)],
                 onTap: () => provider.toggleMute(),
               ),
@@ -177,7 +170,7 @@ class _CallScreenState extends State<CallScreen> {
               // Desligar
               _build3DButton(
                 icon: Icons.call_end,
-                label: 'Desligar',
+                label: lang.t('hangup'),
                 isCritical: true,
                 colors: [const Color(0xFFFF6B6B), const Color(0xFFC92A2A)],
                 onTap: () => provider.endCall(),
@@ -186,7 +179,7 @@ class _CallScreenState extends State<CallScreen> {
               // Speaker
               _build3DButton(
                 icon: provider.isSpeakerOn ? Icons.volume_up : Icons.hearing,
-                label: provider.isSpeakerOn ? 'Alto-falante' : 'Fone',
+                label: provider.isSpeakerOn ? lang.t('speaker') : lang.t('earpiece'),
                 colors: [const Color(0xFFFFB6C1), const Color(0xFFFF69B4)],
                 onTap: () => provider.toggleSpeaker(),
               ),
@@ -198,7 +191,7 @@ class _CallScreenState extends State<CallScreen> {
     );
   }
 
-  Widget _buildErrorState(CallProvider provider) {
+  Widget _buildErrorState(CallProvider provider, LanguageProvider lang) {
     Future.delayed(const Duration(seconds: 4), () {
       if (mounted) context.go('/home');
     });
@@ -210,7 +203,7 @@ class _CallScreenState extends State<CallScreen> {
           Icon(Icons.error_outline, size: 80, color: Colors.red.shade400),
           const SizedBox(height: 20),
           Text(
-            'Erro na chamada',
+            lang.t('call_error'),
             style: TextStyle(
               fontSize: 24,
               color: Colors.red.shade800,
@@ -221,7 +214,7 @@ class _CallScreenState extends State<CallScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
-              provider.errorMessage ?? 'Reiniciando sistema...',
+              provider.errorMessage ?? lang.t('restarting'),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16, color: Colors.red.shade700),
             ),
@@ -231,7 +224,7 @@ class _CallScreenState extends State<CallScreen> {
     );
   }
 
-  Widget _buildEndedState(CallProvider provider) {
+  Widget _buildEndedState(LanguageProvider lang) {
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) context.go('/home');
     });
@@ -243,7 +236,7 @@ class _CallScreenState extends State<CallScreen> {
           Icon(Icons.call_end, size: 80, color: Colors.pink.shade300),
           const SizedBox(height: 20),
           Text(
-            'Chamada Encerrada',
+            lang.t('call_ended'),
             style: TextStyle(
               fontSize: 24,
               color: Colors.pink.shade800,
@@ -285,12 +278,12 @@ class _CallScreenState extends State<CallScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: colors.last.withOpacity(0.5),
+                    color: colors.last.withValues(alpha:0.5),
                     blurRadius: 15,
                     offset: const Offset(0, 8),
                   ),
                   BoxShadow(
-                    color: Colors.white.withOpacity(0.4),
+                    color: Colors.white.withValues(alpha:0.4),
                     blurRadius: 10,
                     offset: const Offset(-4, -4),
                   ),
@@ -302,11 +295,7 @@ class _CallScreenState extends State<CallScreen> {
                   size: iconSize,
                   color: Colors.white,
                   shadows: const [
-                    Shadow(
-                      color: Colors.black26,
-                      offset: Offset(1, 1),
-                      blurRadius: 3,
-                    ),
+                    Shadow(color: Colors.black26, offset: Offset(1, 1), blurRadius: 3),
                   ],
                 ),
               ),
